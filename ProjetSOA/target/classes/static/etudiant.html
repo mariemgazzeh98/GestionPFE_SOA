@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Espace Étudiant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .status-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-option { transition: all 0.3s; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-option:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="container mt-5 mb-5">
+
+<!-- HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-primary fw-bold">🎓 Suivi de mon PFE</h2>
+    <button onclick="logout()" class="btn btn-danger btn-sm">Déconnexion</button>
+</div>
+
+<!-- ======================================================= -->
+<!-- ZONE 1 : DASHBOARD (Visible si projet existe)           -->
+<!-- ======================================================= -->
+<div id="suiviSection" style="display: none;">
+
+    <div class="alert alert-info text-center shadow-sm">
+        <h3 id="titreProjetDisplay" class="fw-bold mb-1"></h3>
+        <p id="descProjetDisplay" class="text-muted small mb-2"></p>
+        <span id="globalEtat" class="badge bg-secondary fs-6">EN COURS</span>
+    </div>
+
+    <div class="row">
+        <!-- BLOC SOCIÉTÉ -->
+        <div class="col-md-6">
+            <div class="status-card border-start border-5 border-primary">
+                <h5>🏢 Côté Entreprise</h5>
+                <p class="mb-1">Actuelle : <strong id="nomSociete"></strong></p>
+                <div id="badgeSociete" class="badge bg-warning text-dark mb-3">EN ATTENTE</div>
+
+                <!-- Correction Société (Si Refus) -->
+                <div id="fixSociete" style="display:none;" class="mt-2 p-2 bg-light border rounded">
+                    <label class="small text-danger fw-bold">Choisir une autre société :</label>
+                    <select id="newSocieteSelect" class="form-select form-select-sm mb-2"></select>
+                    <button onclick="corrigerSociete()" class="btn btn-danger btn-sm w-100">Renvoyer demande</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOC ENSEIGNANT -->
+        <div class="col-md-6">
+            <div class="status-card border-start border-5 border-info">
+                <h5>👨‍🏫 Côté Enseignant</h5>
+                <p class="mb-1">Actuel : <strong id="nomProf"></strong></p>
+                <div id="badgeProf" class="badge bg-warning text-dark mb-3">EN ATTENTE</div>
+
+                <!-- Correction Prof (Si Refus) -->
+                <div id="fixProf" style="display:none;" class="mt-2 p-2 bg-light border rounded">
+                    <label class="small text-danger fw-bold">Choisir un autre enseignant :</label>
+                    <select id="newProfSelect" class="form-select form-select-sm mb-2"></select>
+                    <button onclick="corrigerProf()" class="btn btn-danger btn-sm w-100">Renvoyer demande</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- ZONE 2 : FORMULAIRES (Visible si AUCUN projet)          -->
+<!-- ======================================================= -->
+<div id="formSection" style="display: none;">
+
+    <!-- OPTION A : Choisir Sujet Existant -->
+    <div class="card card-option mb-5">
+        <div class="card-header bg-dark text-white">
+            <h4 class="mb-0">Option A : Choisir un sujet proposé par une entreprise</h4>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="fw-bold mb-2">Choix de l'Enseignant (Superviseur) :</label>
+                <select id="profIdOptionA" class="form-select border-primary">
+                    <option value="" disabled selected>-- Chargement... --</option>
+                </select>
+            </div>
+
+            <table class="table table-striped align-middle mt-3">
+                <thead class="table-light">
+                <tr><th>Titre</th><th>Société</th><th>Action</th></tr>
+                </thead>
+                <tbody id="listeSujets"></tbody>
+            </table>
+            <button onclick="chargerSujets()" class="btn btn-sm btn-outline-secondary">🔄 Actualiser</button>
+        </div>
+    </div>
+
+    <!-- OPTION B : Proposer Idée (AVEC LISTES DYNAMIQUES) -->
+    <div class="card card-option border-info">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0">Option B : Proposer mon Idée Personnelle</h4>
+        </div>
+        <div class="card-body">
+            <label class="fw-bold">Titre :</label>
+            <input type="text" id="titre" class="form-control mb-2" placeholder="Titre du projet">
+
+            <label class="fw-bold">Description :</label>
+            <textarea id="desc" class="form-control mb-2" rows="3" placeholder="Description..."></textarea>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="fw-bold">Société d'accueil :</label>
+                    <select id="initSoc" class="form-select"><option>-- Chargement --</option></select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="fw-bold">Enseignant destinataire :</label>
+                    <select id="initProf" class="form-select"><option>-- Chargement --</option></select>
+                </div>
+            </div>
+            <button onclick="proposer()" class="btn btn-primary w-100 fw-bold">Envoyer ma proposition</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- JAVASCRIPT -->
+<script>
+
+    const BASE_URL = "http://localhost:8083/api/pfe";
+    const etuId = localStorage.getItem('userId') || 1;
+    let monProjetId = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        await chargerListes(); // Charge toutes les listes (Profs, Sociétés, Sujets A)
+        await verifierStatus(); // Vérifie si l'étudiant a déjà un projet
+    });
+
+    // --- 1. VERIFICATION STATUT ---
+    async function verifierStatus() {
+        try {
+            const res = await fetch(`${BASE_URL}/etudiant/${etuId}/projet`);
+            if (res.status === 204) {
+                // Pas de projet -> On affiche les formulaires A et B
+                document.getElementById("formSection").style.display = "block";
+                document.getElementById("suiviSection").style.display = "none";
+            } else {
+                // Projet existe -> On affiche le Dashboard
+                const p = await res.json();
+                monProjetId = p.id;
+                document.getElementById("formSection").style.display = "none";
+                afficherSuivi(p);
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // --- 2. AFFICHAGE DASHBOARD ---
+    function afficherSuivi(p) {
+        document.getElementById("suiviSection").style.display = "block";
+        document.getElementById("titreProjetDisplay").innerText = p.titre;
+        document.getElementById("descProjetDisplay").innerText = p.description;
+
+        document.getElementById("nomSociete").innerText = p.societe ? p.societe.nom : "Non spécifié";
+        document.getElementById("nomProf").innerText = p.enseignant ? p.enseignant.nom : "Non spécifié";
+
+        // Si tout est validé
+        if (p.etat === 'AFFECTE') {
+            document.getElementById("globalEtat").className = "badge bg-success";
+            document.getElementById("globalEtat").innerText = "VALIDÉ FINAL";
+            // Force l'affichage vert partout
+            uiEtat('VALIDE', "badgeSociete", "fixSociete");
+            uiEtat('VALIDE', "badgeProf", "fixProf");
+        } else {
+            document.getElementById("globalEtat").className = "badge bg-secondary";
+            document.getElementById("globalEtat").innerText = "EN COURS";
+            // Affiche l'état réel
+            uiEtat(p.validationSociete, "badgeSociete", "fixSociete");
+            uiEtat(p.validationEnseignant, "badgeProf", "fixProf");
+        }
+    }
+
+    function uiEtat(etat, badgeId, divId) {
+        const badge = document.getElementById(badgeId);
+        const div = document.getElementById(divId);
+
+        if (etat === 'VALIDE') {
+            badge.className = "badge bg-success"; badge.innerText = "ACCEPTÉ ✅";
+            div.style.display = "none";
+        } else if (etat === 'REFUSE') {
+            badge.className = "badge bg-danger"; badge.innerText = "REFUSÉ ❌";
+            div.style.display = "block"; // Affiche correction
+        } else {
+            badge.className = "badge bg-warning text-dark"; badge.innerText = "EN ATTENTE ⏳";
+            div.style.display = "none";
+        }
+    }
+
+    // --- 3. CHARGEMENT DONNEES (POUR OPTION A et B) ---
+    async function chargerListes() {
+        // Enseignants
+        const profs = await (await fetch(BASE_URL + "/enseignants")).json();
+        remplirSelect("initProf", profs);       // Pour Option B
+        remplirSelect("newProfSelect", profs);  // Pour Correction Dashboard
+        remplirSelect("profIdOptionA", profs);  // Pour Option A (Superviseur)
+
+        // Sociétés
+        const socs = await (await fetch(BASE_URL + "/societes")).json();
+        remplirSelect("initSoc", socs);         // Pour Option B
+        remplirSelect("newSocieteSelect", socs);// Pour Correction Dashboard
+
+        // Sujets Disponibles (Pour Option A)
+        await chargerSujets();
+    }
+
+    function remplirSelect(id, list) {
+        const s = document.getElementById(id);
+        if(!s) return;
+        s.innerHTML = '<option value="" disabled selected>-- Choisir --</option>';
+        list.forEach(item => s.innerHTML += `<option value="${item.id}">${item.nom}</option>`);
+    }
+
+    async function chargerSujets() {
+        const res = await fetch(`${BASE_URL}/disponibles`);
+        const data = await res.json();
+        const t = document.getElementById("listeSujets");
+        t.innerHTML = "";
+
+        if(data.length === 0) {
+            t.innerHTML = "<tr><td colspan='3' class='text-center'>Aucun sujet disponible</td></tr>";
+            return;
+        }
+
+        data.forEach(p => {
+            let nomSoc = p.societe ? p.societe.nom : "Inconnue";
+            t.innerHTML += `
+                <tr>
+                    <td class="fw-bold">${p.titre}</td>
+                    <td>${nomSoc}</td>
+                    <td><button class="btn btn-sm btn-success" onclick="choisirSujet(${p.id})">Choisir</button></td>
+                </tr>`;
+        });
+    }
+
+    // --- 4. ACTIONS OPTION B (Proposer) ---
+    async function proposer() {
+        const body = {
+            titre: document.getElementById("titre").value,
+            description: document.getElementById("desc").value,
+            societeId: document.getElementById("initSoc").value
+        };
+        const profId = document.getElementById("initProf").value;
+
+        if(!body.titre || !body.societeId || !profId) return alert("Tout remplir !");
+
+        await fetch(`${BASE_URL}/proposer?etudiantId=${etuId}&profId=${profId}`, {
+            method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body)
+        });
+        location.reload();
+    }
+
+    // --- 5. ACTIONS OPTION A (Choisir Existant) ---
+    async function choisirSujet(pid) {
+        const profId = document.getElementById("profIdOptionA").value;
+        if(!profId) return alert("Veuillez sélectionner un superviseur dans l'Option A !");
+
+        try {
+            const res = await fetch(`${BASE_URL}/choisir?projetId=${pid}&etudiantId=${etuId}&profId=${profId}`, { method: "POST" });
+            if(res.ok) { alert("Sujet choisi avec succès !"); location.reload(); }
+            else { alert("Erreur lors du choix"); }
+        } catch(e) { alert("Erreur serveur"); }
+    }
+
+    // --- 6. ACTIONS CORRECTION (DASHBOARD) ---
+    async function corrigerSociete() {
+        const newSocId = document.getElementById("newSocieteSelect").value;
+        await fetch(`${BASE_URL}/etudiant/corriger/${monProjetId}?societeId=${newSocId}`, { method: "PUT" });
+        alert("Corrigé !"); location.reload();
+    }
+
+    async function corrigerProf() {
+        const newProfId = document.getElementById("newProfSelect").value;
+        await fetch(`${BASE_URL}/etudiant/corriger/${monProjetId}?enseignantId=${newProfId}`, { method: "PUT" });
+        alert("Corrigé !"); location.reload();
+    }
+
+    function logout() { window.location.href = "login.html"; }
+</script>
+
+</body>
+</html>

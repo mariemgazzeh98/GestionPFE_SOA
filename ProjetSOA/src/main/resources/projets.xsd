@@ -1,0 +1,26 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://pfe.com/soap"
+           xmlns:tns="http://pfe.com/soap"
+           elementFormDefault="qualified">
+
+    <!-- La Requête : On envoie l'ID du projet -->
+    <xs:element name="getProjetRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="id" type="xs:long"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- La Réponse : On reçoit les infos du projet -->
+    <xs:element name="getProjetResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="titre" type="xs:string"/>
+                <xs:element name="etat" type="xs:string"/>
+                <xs:element name="etudiant" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion PFE - Accueil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 80px; }
+        .card { transition: transform 0.2s; border: none; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .card:hover { transform: translateY(-5px); }
+        h1 { color: #0d6efd; font-weight: bold; }
+    </style>
+</head>
+<body class="container text-center">
+<h1 class="mb-5">Plateforme de Gestion des PFE</h1>
+<p class="lead mb-5">Veuillez sélectionner votre espace :</p>
+
+<div class="row justify-content-center">
+    <!-- Carte Étudiant -->
+    <div class="col-md-3">
+        <div class="card p-3">
+            <div class="card-body">
+                <h5 class="card-title">Espace Étudiant</h5>
+                <p class="card-text text-muted small">Choisir un sujet ou proposer une idée.</p>
+                <a href="login.html?role=ETUDIANT" class="btn btn-primary w-100">Accéder</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carte Enseignant -->
+    <div class="col-md-3">
+        <div class="card p-3">
+            <div class="card-body">
+                <h5 class="card-title">Espace Enseignant</h5>
+                <p class="card-text text-muted small">Valider les demandes et suivre les projets.</p>
+                <a href="login.html?role=ENSEIGNANT" class="btn btn-primary w-100">Accéder</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carte Société -->
+    <div class="col-md-3">
+        <div class="card p-3">
+            <div class="card-body">
+                <h5 class="card-title">Espace Société</h5>
+                <p class="card-text text-muted small">Publier des offres de stages PFE.</p>
+                <a href="login.html?role=SOCIETE" class="btn btn-primary w-100">Accéder</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

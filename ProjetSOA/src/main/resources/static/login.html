@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .card { width: 100%; max-width: 400px; padding: 20px; border-radius: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<!-- Formulaire de Connexion -->
+<div class="card shadow" id="loginCard">
+    <h3 class="text-center mb-3" id="loginTitle">Connexion</h3>
+
+    <div class="mb-3">
+        <label id="labelIdentifiant" class="form-label fw-bold">Email</label>
+        <input type="text" id="identifiant" class="form-control">
+    </div>
+
+    <div class="mb-3" id="divPassword">
+        <label class="form-label fw-bold">Mot de passe</label>
+        <input type="password" id="password" class="form-control">
+    </div>
+
+    <button onclick="login()" class="btn btn-primary w-100 mb-3">Se connecter</button>
+
+    <div class="d-flex justify-content-between">
+        <a href="index.html" class="text-decoration-none text-secondary">← Retour</a>
+        <button onclick="showRegister()" class="btn btn-link p-0">Créer un compte</button>
+    </div>
+</div>
+
+<!-- Formulaire d'Inscription -->
+<div class="card shadow hidden" id="registerCard">
+    <h3 class="text-center mb-3 text-success">Inscription</h3>
+    <p class="text-center text-muted" id="regSubtitle">Nouvel utilisateur</p>
+
+    <!-- Champ Nom (Pour tout le monde) -->
+    <input type="text" id="regNom" class="form-control mb-2" placeholder="Nom complet">
+
+    <!-- Champ Email (Caché pour société) -->
+    <div id="divRegEmail">
+        <input type="email" id="regEmail" class="form-control mb-2" placeholder="Email">
+    </div>
+
+    <!-- Champ Mot de passe (Caché pour société) -->
+    <div id="divRegPass">
+        <input type="password" id="regPass" class="form-control mb-2" placeholder="Mot de passe">
+    </div>
+
+    <button onclick="register()" class="btn btn-success w-100 mb-3">S'inscrire</button>
+    <button onclick="showLogin()" class="btn btn-link w-100">Annuler</button>
+</div>
+
+<script>
+    // 1. Récupération du rôle
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentRole = urlParams.get('role');
+
+    if (!currentRole) {
+        window.location.href = 'index.html';
+    }
+
+    // 2. Configuration de l'affichage
+    function setupUI() {
+        let roleName = "";
+
+        if (currentRole === 'ETUDIANT') roleName = "Étudiant";
+        if (currentRole === 'ENSEIGNANT') roleName = "Enseignant";
+        if (currentRole === 'SOCIETE') roleName = "Société";
+
+        document.getElementById('loginTitle').innerText = "Connexion " + roleName;
+        document.getElementById('regSubtitle').innerText = "Compte " + roleName;
+
+        // --- RÈGLES SPÉCIALES POUR LA SOCIÉTÉ ---
+        if (currentRole === 'SOCIETE') {
+            // Login : Pas de mot de passe, Label = Nom
+            document.getElementById('divPassword').classList.add('hidden');
+            document.getElementById('labelIdentifiant').innerText = "Nom de la Société";
+            document.getElementById('identifiant').placeholder = "Entrez le nom exact";
+
+            // Inscription : Pas d'email, Pas de mot de passe
+            document.getElementById('divRegEmail').classList.add('hidden');
+            document.getElementById('divRegPass').classList.add('hidden');
+            document.getElementById('regNom').placeholder = "Nom de votre Société";
+        } else {
+            // Pour Etudiant/Prof : Tout est visible
+            document.getElementById('labelIdentifiant').innerText = "Nom Compte";
+            document.getElementById('identifiant').placeholder = "nom compte";
+        }
+    }
+
+    function showRegister() {
+        document.getElementById('loginCard').classList.add('hidden');
+        document.getElementById('registerCard').classList.remove('hidden');
+    }
+
+    function showLogin() {
+        document.getElementById('registerCard').classList.add('hidden');
+        document.getElementById('loginCard').classList.remove('hidden');
+    }
+
+    // 3. API Connexion
+    function login() {
+            const id = document.getElementById('identifiant').value;
+            const pass = document.getElementById('password').value;
+
+            // Vérification simple
+            if(!id) { alert("Veuillez saisir votre identifiant."); return; }
+
+            const data = {
+                role: currentRole,
+                identifiant: id,
+                motDePasse: pass
+            };
+
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(userId => {
+                // Le backend renvoie -1 si échec, ou l'ID si succès
+                if (userId && userId > 0) {
+                    localStorage.setItem('userId', userId);
+                    localStorage.setItem('userRole', currentRole);
+
+                    if (currentRole === 'ETUDIANT') window.location.href = 'etudiant.html';
+                    if (currentRole === 'ENSEIGNANT') window.location.href = 'enseignant.html';
+                    if (currentRole === 'SOCIETE') window.location.href = 'societe.html';
+                } else {
+                    // --- C'EST ICI QUE J'AI FAIT LA MODIFICATION ---
+                    if (currentRole === 'SOCIETE') {
+                        alert("Erreur : Le nom de la société n'existe pas.");
+                    } else {
+                        alert("Erreur : Identifiant ou mot de passe incorrect.");
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Erreur technique de connexion.");
+            });
+        }
+    // 4. API Inscription
+    function register() {
+        const nom = document.getElementById('regNom').value;
+
+        if(!nom) { alert("Le nom est obligatoire."); return; }
+
+        const data = {
+            role: currentRole,
+            nom: nom,
+            email: document.getElementById('regEmail').value,
+            motDePasse: document.getElementById('regPass').value
+        };
+
+        fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(id => {
+            if(id > 0) {
+                alert("Compte créé avec succès ! Connectez-vous maintenant.");
+                showLogin();
+                // On pré-remplit le champ de connexion pour faciliter la vie
+                document.getElementById('identifiant').value = nom;
+            } else {
+                alert("Erreur lors de l'inscription.");
+            }
+        });
+    }
+
+    setupUI();
+</script>
+</body>
+</html>
